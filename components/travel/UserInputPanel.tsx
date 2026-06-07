@@ -41,6 +41,12 @@ export function UserInputPanel() {
     }, 1500);
   };
 
+  const examples = [
+    '我从北京出发，想去山西平遥玩3天，坐高铁，预算3000',
+    '杭州出发，去成都4天，飞机，想看古城和美食',
+    '深圳去大理5天自驾，预算5000',
+  ];
+
   const parseInputText = (text: string) => {
     // Simple mock parsing logic
     let intercityTransport: 'train' | 'plane' | 'bus' | 'selfDrive' | 'cycling' | 'unselected' = 'unselected';
@@ -102,31 +108,66 @@ export function UserInputPanel() {
   };
 
   return (
-    <Card className="border-0 shadow-sm bg-white">
-      <CardContent className="p-4 md:p-6 space-y-4">
+    <Card className="border-primary/20 bg-white shadow-lg hover:shadow-xl transition-shadow">
+      <CardContent className="p-6 space-y-4">
+        {/* Title */}
+        <div>
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <span className="text-2xl">🗺️</span>
+            计划你的旅程
+          </h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            描述你的旅行想法，AI 将帮你规划最佳路线
+          </p>
+        </div>
+
+        {/* Input area */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700">你想怎么玩</label>
           <Textarea
-            placeholder="示例：我从六安出发，想去淄博玩4天，准备坐高铁，想吃当地特色美食，预算4000，最后一天玩好了后走。"
+            placeholder="示例：我从六安出发，想去淄博玩4天，准备坐高铁，想吃当地特色美食，预算4000..."
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            className="min-h-[120px] resize-none bg-slate-50/50 border-slate-200 focus:border-sky-400 focus:ring-sky-400"
-            disabled={false}
+            className="min-h-[130px] resize-none bg-slate-50/80 border-primary/20 focus:border-primary focus:ring-primary/30 rounded-lg text-sm"
           />
         </div>
 
+        {/* Submit button */}
         <Button
           onClick={handleParseRequirements}
           disabled={!inputText.trim()}
-          className="w-full bg-gradient-to-r from-sky-500 to-teal-500 hover:from-sky-600 hover:to-teal-600 gap-2"
+          className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white gap-2 font-semibold"
+          size="lg"
         >
           <Sparkles className="w-4 h-4" />
-          整理需求
+          开始规划
           <ArrowRight className="w-4 h-4" />
         </Button>
 
-        <div className="text-xs text-slate-400">
-          提示：请描述您的出发地、目的地、行程天数、预算、交通方式等信息
+        {/* Tips and examples */}
+        <div className="space-y-3">
+          <div className="text-xs text-slate-500 font-semibold uppercase tracking-wide">
+            💡 示例灵感
+          </div>
+          <div className="space-y-2">
+            {examples.map((example, idx) => (
+              <button
+                key={idx}
+                onClick={() => setInputText(example)}
+                className="w-full text-left p-2.5 rounded-lg border border-slate-200/50 hover:border-primary/30 hover:bg-primary/5 transition-all text-xs text-slate-600 hover:text-slate-800 group"
+              >
+                <div className="flex items-start gap-2">
+                  <span className="text-primary font-bold flex-shrink-0">→</span>
+                  <span>{example}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Info text */}
+        <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-slate-50/50 rounded-lg p-2.5">
+          <span className="flex-shrink-0 mt-0.5">ℹ️</span>
+          <span>包含：出发地 · 目的地 · 天数 · 预算 · 交通 · 兴趣</span>
         </div>
       </CardContent>
     </Card>

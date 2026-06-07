@@ -68,12 +68,13 @@ export function RequirementConfirmation() {
 
   if (planningState === 'parsing' || isParsing) {
     return (
-      <Card className="border-0 shadow-sm bg-white">
-        <CardContent className="p-6 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="w-6 h-6 text-sky-500 animate-spin" />
-            <span className="text-sm text-slate-600">正在整理需求...</span>
+      <Card className="border-primary/20 bg-white">
+        <CardContent className="p-8 flex flex-col items-center justify-center gap-4">
+          <div className="relative w-12 h-12">
+            <Loader2 className="w-12 h-12 text-primary animate-spin" />
           </div>
+          <span className="text-sm font-medium text-slate-700">正在为你整理需求...</span>
+          <span className="text-xs text-muted-foreground">AI 正在分析你的旅行偏好</span>
         </CardContent>
       </Card>
     );
@@ -245,16 +246,18 @@ export function RequirementConfirmation() {
   }
 
   return (
-    <Card className="border-0 shadow-sm bg-white">
-      <CardHeader className="pb-3">
+    <Card className="border-primary/20 bg-white shadow-md">
+      <CardHeader className="pb-4 border-b border-primary/10">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-medium text-slate-800">需求确认</CardTitle>
+          <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+            <span className="text-lg">✓</span>
+            需求已识别
+          </CardTitle>
           <Button
             variant="ghost"
             size="sm"
-            className="text-xs"
+            className="text-xs text-muted-foreground hover:text-slate-700"
             onClick={() => {
-              // Reset and go back to input
               setPlanningState('empty');
             }}
           >

@@ -9,7 +9,9 @@ import { AppLayout } from '@/components/travel/AppLayout';
 import { UserInputPanel } from '@/components/travel/UserInputPanel';
 import { RequirementConfirmation } from '@/components/travel/RequirementConfirmation';
 import { TrainSelectionPanel } from '@/components/travel/TrainSelectionPanel';
-import { MultiDayTimeline } from '@/components/travel/DailyTimeline';
+import { MultiDayTimelineV2 } from '@/components/travel/DailyTimelineV2';
+import { TravelMapV2 } from '@/components/travel/TravelMapV2';
+import { RouteHeader } from '@/components/travel/RouteHeader';
 import { AttractionDrawer, HotelDrawer } from '@/components/travel/DetailDrawers';
 import { PlanSummary } from '@/components/travel/PlanSummary';
 import { HistoryPanel, RAGPanel } from '@/components/travel/AuxiliaryPanels';
@@ -209,124 +211,194 @@ export default function HomePage() {
   // Result view
   if (planningState === 'result' && travelPlan) {
     const allAttractions = travelPlan.itineraries.flatMap((day) => day.attractions);
-    const weatherData = travelPlan.itineraries.map((day) => day.weather!);
 
     return (
       <AppLayout>
-        <div className="max-w-7xl mx-auto p-4 space-y-4">
-          {/* Header */}
+        <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+          {/* Route header */}
+          <RouteHeader plan={travelPlan} requirements={requirements} />
+
+          {/* Page title and action */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-slate-800">{travelPlan.city} {travelPlan.tripDays}日游</h1>
-              <p className="text-sm text-slate-500">
-                {travelPlan.departure}出发
-                {requirements.departureDate && (
-                  <span> · {format(requirements.departureDate, 'yyyy年MM月', { locale: zhCN })}</span>
-                )}
+              <h1 className="text-3xl font-bold text-slate-800">
+                {travelPlan.city}
+                <span className="text-primary ml-2">{travelPlan.tripDays}日之旅</span>
+              </h1>
+              <p className="text-sm text-slate-500 mt-2">
+                {format(requirements.departureDate || new Date(), 'yyyy年M月d日', { locale: zhCN })} 出发
               </p>
             </div>
-            <Button variant="outline" onClick={handleBackToInput}>
+            <Button
+              variant="outline"
+              onClick={handleBackToInput}
+              className="border-primary/30 hover:bg-primary/5"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               新规划
             </Button>
           </div>
 
-          {/* Main content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Left: Timeline */}
+          {/* Main content - Map First */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Left: Timeline (smaller) */}
             <div className="lg:col-span-1 order-2 lg:order-1">
-              <div className="sticky top-16 space-y-4">
-                <Card className="border-0 shadow-sm bg-white">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                      <List className="w-4 h-4 text-blue-600" />
+              <div className="sticky top-20 space-y-4">
+                <Card className="border-primary/20 bg-white shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                      <List className="w-4 h-4 text-primary" />
                       每日行程
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <MultiDayTimeline
+                  <CardContent className="max-h-[600px] overflow-y-auto">
+                    <MultiDayTimelineV2
                       itineraries={travelPlan.itineraries}
                       onAttractionClick={handleAttractionClick}
                       onHotelClick={handleHotelClick}
                     />
                   </CardContent>
                 </Card>
+
+                {/* Plan summary card */}
+                <Card className="border-secondary/20 bg-secondary/5">
+                  <CardContent className="p-4">
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">总费用</span>
+                        <span className="font-bold text-lg text-primary">¥{travelPlan.totalCost.total}</span>
+                      </div>
+                      <div className="h-px bg-border" />
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">城际交通</span>
+                        <span className="font-semibold">¥{travelPlan.totalCost.intercityTransport}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">住宿</span>
+                        <span className="font-semibold">¥{travelPlan.totalCost.accommodation}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">门票/餐饮</span>
+                        <span className="font-semibold">¥{travelPlan.totalCost.tickets + travelPlan.totalCost.dining}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
 
-            {/* Right: Map and summary */}
-            <div className="lg:col-span-2 order-1 lg:order-2 space-y-4">
-              {/* Tabs for Map/Summary */}
-              <Tabs defaultValue="map" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-slate-100/50">
-                  <TabsTrigger value="map" className="gap-2">
-                    <MapPin className="w-4 h-4" />
-                    地图
-                  </TabsTrigger>
+            {/* Right: Map and details (larger) */}
+            <div className="lg:col-span-3 order-1 lg:order-2 space-y-6">
+              {/* Map */}
+              <TravelMapV2
+                attractions={allAttractions}
+                selectedDay={selectedMapDay}
+                onAttractionClick={handleAttractionClick}
+              />
+
+              {/* Tabs for Summary and Other */}
+              <Tabs defaultValue="summary" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 bg-slate-100/50">
                   <TabsTrigger value="summary" className="gap-2">
                     <FileText className="w-4 h-4" />
-                    概览
+                    <span className="hidden sm:inline">预算总览</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="transport" className="gap-2">
+                    <MapPin className="w-4 h-4" />
+                    <span className="hidden sm:inline">交通</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="details" className="gap-2">
+                    <Settings className="w-4 h-4" />
+                    <span className="hidden sm:inline">详情</span>
                   </TabsTrigger>
                 </TabsList>
-
-                <TabsContent value="map" className="mt-4 space-y-4">
-                  {/* Day filter */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={selectedMapDay === null ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSelectedMapDay(null)}
-                    >
-                      全部
-                    </Button>
-                    {travelPlan.itineraries.map((day) => (
-                      <Button
-                        key={day.dayNumber}
-                        variant={selectedMapDay === day.dayNumber ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setSelectedMapDay(day.dayNumber)}
-                      >
-                        第{day.dayNumber}天
-                      </Button>
-                    ))}
-                  </div>
-
-                  <TravelMap
-                    attractions={allAttractions}
-                    selectedDay={selectedMapDay}
-                    onAttractionClick={handleAttractionClick}
-                  />
-                </TabsContent>
 
                 <TabsContent value="summary" className="mt-4">
                   <PlanSummary plan={travelPlan} onReselectTrain={handleReselectTrain} />
                 </TabsContent>
-              </Tabs>
 
-              {/* Weather panel */}
-              <Card className="border-0 shadow-sm bg-white">
-                <CardContent className="p-4">
-                  <div className="flex gap-4 overflow-x-auto">
-                    {weatherData.map((weather, index) => (
-                      <div
-                        key={index}
-                        className="flex-shrink-0 min-w-[80px] text-center"
-                      >
-                        <div className="text-xs text-slate-500 mb-1">第{index + 1}天</div>
-                        <div className="text-lg">
-                          {weather?.weather === '晴' ? '☀️' : weather?.weather === '多云' ? '⛅' : '☁️'}
-                        </div>
-                        <div className="text-sm font-medium">{weather?.tempMin}°~{weather?.tempMax}°</div>
-                        <div className="text-xs text-slate-400">{weather?.windDirection}{weather?.windLevel}级</div>
+                <TabsContent value="transport" className="mt-4">
+                  <Card className="border-primary/20">
+                    <CardHeader>
+                      <CardTitle className="text-sm">城际交通详情</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {travelPlan.intercityTransport.outbound && (
+                          <div className="p-4 rounded-lg border-2 border-sky-300 bg-sky-50">
+                            <div className="text-xs text-sky-600 font-semibold uppercase mb-2">去程</div>
+                            <div className="text-lg font-bold text-slate-800">
+                              {travelPlan.intercityTransport.outbound.trainNo}
+                            </div>
+                            <div className="text-sm text-slate-600 mt-2">
+                              {travelPlan.intercityTransport.outbound.departureTime} →{' '}
+                              {travelPlan.intercityTransport.outbound.arrivalTime}
+                            </div>
+                            <div className="text-xs text-slate-500 mt-1">
+                              {travelPlan.intercityTransport.outbound.departureStation} →{' '}
+                              {travelPlan.intercityTransport.outbound.arrivalStation}
+                            </div>
+                            <div className="font-bold text-sky-600 mt-2">
+                              ¥{travelPlan.intercityTransport.outbound.price}
+                            </div>
+                          </div>
+                        )}
+                        {travelPlan.intercityTransport.return && (
+                          <div className="p-4 rounded-lg border-2 border-teal-300 bg-teal-50">
+                            <div className="text-xs text-teal-600 font-semibold uppercase mb-2">返程</div>
+                            <div className="text-lg font-bold text-slate-800">
+                              {travelPlan.intercityTransport.return.trainNo}
+                            </div>
+                            <div className="text-sm text-slate-600 mt-2">
+                              {travelPlan.intercityTransport.return.departureTime} →{' '}
+                              {travelPlan.intercityTransport.return.arrivalTime}
+                            </div>
+                            <div className="text-xs text-slate-500 mt-1">
+                              {travelPlan.intercityTransport.return.departureStation} →{' '}
+                              {travelPlan.intercityTransport.return.arrivalStation}
+                            </div>
+                            <div className="font-bold text-teal-600 mt-2">
+                              ¥{travelPlan.intercityTransport.return.price}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="details" className="mt-4">
+                  <Card className="border-primary/20">
+                    <CardHeader>
+                      <CardTitle className="text-sm">预订须知</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-xs">
+                      <div>
+                        <div className="font-semibold text-slate-700 mb-1">车票</div>
+                        <div className="text-slate-600">
+                          信息以12306官方平台为准，请提前查询并购买
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-700 mb-1">景点</div>
+                        <div className="text-slate-600">
+                          营业时间、门票政策请出发前再次确认
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-700 mb-1">餐饮</div>
+                        <div className="text-slate-600">
+                          就餐地点的排队、营业状态请出发前确认
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
 
-          {/* RAG Panel */}
+          {/* RAG Panel at bottom */}
           <RAGPanel references={ragReferences} />
         </div>
 
