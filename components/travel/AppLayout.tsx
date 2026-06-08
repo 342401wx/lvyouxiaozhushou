@@ -2,14 +2,18 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/lib/store';
+import { useAuthStore, usePlanningStore } from '@/lib/store';
 import { LogOut, MapPin } from 'lucide-react';
+import { authLogout } from '@/lib/backend-api';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuthStore();
+  const { resetAll } = usePlanningStore();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await authLogout().catch(() => undefined);
+    resetAll();
     logout();
     router.push('/auth');
   };

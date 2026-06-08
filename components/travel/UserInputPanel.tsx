@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sparkles, ArrowRight } from 'lucide-react';
+import { getErrorMessage, parseIntent } from '@/lib/backend-api';
+import { mapBackendIntentToRequirements } from '@/lib/backend-adapter';
 
 export function UserInputPanel() {
-  const { requirements, setRequirements, setPlanningState, setLoadingStates } = usePlanningStore();
+  const { requirements, setRequirements, setPlanningState, setLoadingStates, setErrorMessage } = usePlanningStore();
   const [inputText, setInputText] = useState('');
 
   const handleParseRequirements = async () => {
@@ -21,15 +23,16 @@ export function UserInputPanel() {
     setLoadingStates({ isParsing: true });
     setPlanningState('parsing');
 
-    // Simulate AI parsing
-    setTimeout(() => {
-      // Mock parsing result
-      const parsedRequirements = parseInputText(inputText);
+    try {
+      const result = await parseIntent(inputText);
+      const parsedRequirements = mapBackendIntentToRequirements(result.data || {}, inputText);
       setRequirements(parsedRequirements);
       setLoadingStates({ isParsing: false });
 
       // Determine next state
-      if (parsedRequirements.budget.includesIntercityTransport === null) {
+      if (!parsedRequirements.departure || !parsedRequirements.destination) {
+        setPlanningState('confirm');
+      } else if (parsedRequirements.budget?.includesIntercityTransport === null) {
         setPlanningState('budgetConfirm');
       } else if (parsedRequirements.intercityTransport === 'unselected') {
         setPlanningState('transportMode');
@@ -38,12 +41,16 @@ export function UserInputPanel() {
       } else {
         setPlanningState('ready');
       }
-    }, 1500);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, '需求识别失败，请稍后重试'));
+      setLoadingStates({ isParsing: false });
+      setPlanningState('error');
+    }
   };
 
   const examples = [
     '我从北京出发，想去山西平遥玩3天，坐高铁，预算3000',
-    '杭州出发，去成都4天，飞机，想看古城和美食',
+    '杭州出发，去成都4天，坐高铁，想看古城和美食',
     '深圳去大理5天自驾，预算5000',
   ];
 
@@ -55,7 +62,7 @@ export function UserInputPanel() {
     if (text.includes('高铁') || text.includes('火车')) {
       intercityTransport = 'train';
     } else if (text.includes('飞机')) {
-      intercityTransport = 'plane';
+      intercityTransport = 'unselected';
     } else if (text.includes('大巴')) {
       intercityTransport = 'bus';
     } else if (text.includes('自驾')) {

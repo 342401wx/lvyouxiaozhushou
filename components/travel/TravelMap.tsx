@@ -39,7 +39,7 @@ export function TravelMap({ attractions, onAttractionClick, selectedDay }: Trave
   return (
     <div className="space-y-3">
       {/* Map container */}
-      <div className="relative h-[300px] md:h-[400px] bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+      <div className="relative isolate z-0 h-[300px] md:h-[400px] bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
         <MapContent
           attractions={attractions}
           selectedDay={selectedDay}
@@ -100,7 +100,7 @@ export function TravelMap({ attractions, onAttractionClick, selectedDay }: Trave
               地图浏览
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 h-full overflow-hidden rounded-lg">
+          <div className="relative isolate z-0 flex-1 h-full overflow-hidden rounded-lg">
             <MapContent
               attractions={attractions}
               selectedDay={selectedDay}

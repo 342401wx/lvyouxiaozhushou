@@ -1,36 +1,38 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.log
+*.sqlite
+*.sqlite-*
+data/processed/
+data/vectorstore/
+data/raw/ceval/ceval-exam.zip
+data/*.sqlite
+data/*.sqlite-*
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# frontend
+node_modules/
+.next/
+out/
+build/
+coverage/
+next-dev.*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# local env files
-.env
-.env*.local
-
-# vercel
-.vercel
-
-# typescript
 *.tsbuildinfo
 next-env.d.ts
+.env*.local
+.vercel/
+
+# local submission / unrelated archives
+旅游规划小助手_最新版_*.zip
+TripStar-main.zip
+01-22302131035-姚昊林-刘洁群-基于基于Yolov8的驾驶行为检测系统的设计与实现.doc
+Thumbs.db
+.DS_Store

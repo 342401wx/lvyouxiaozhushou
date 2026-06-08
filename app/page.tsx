@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useAuthStore, usePlanningStore, useHistoryStore } from '@/lib/store';
-import { generateMockTravelPlan, generateMockRAGReferences } from '@/lib/mock-data';
 import { AppLayout } from '@/components/travel/AppLayout';
 import { UserInputPanel } from '@/components/travel/UserInputPanel';
 import { RequirementConfirmation } from '@/components/travel/RequirementConfirmation';
@@ -14,7 +13,7 @@ import { TravelMapV2 } from '@/components/travel/TravelMapV2';
 import { RouteHeader } from '@/components/travel/RouteHeader';
 import { AttractionDrawer, HotelDrawer } from '@/components/travel/DetailDrawers';
 import { PlanSummary } from '@/components/travel/PlanSummary';
-import { HistoryPanel, RAGPanel } from '@/components/travel/AuxiliaryPanels';
+import { HistoryPanel, RAGPanel, WeatherPanel } from '@/components/travel/AuxiliaryPanels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,10 +29,17 @@ import {
   Settings,
   FileText
 } from 'lucide-react';
-import { Attraction, Hotel } from '@/lib/types';
+import { Attraction, Hotel, TravelMemory } from '@/lib/types';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { SelfDrivePanel } from '@/components/travel/SelfDrivePanel';
+import { authMe, createPlan, getErrorMessage, getMemories, getMemory } from '@/lib/backend-api';
+import {
+  createPlanPayload,
+  mapBackendPlanToTravelPlan,
+  mapBackendRequestToRequirements,
+  mapBackendRagReferences,
+} from '@/lib/backend-adapter';
 
 const TravelMap = dynamic(
   () => import('@/components/travel/TravelMap').then((mod) => mod.TravelMap),
@@ -49,11 +55,12 @@ const TravelMap = dynamic(
 
 export default function HomePage() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, login, logout } = useAuthStore();
   const {
     planningState,
     setPlanningState,
     requirements,
+    setRequirements,
     selectedOutboundTrain,
     selectedReturnTrain,
     travelPlan,
@@ -67,6 +74,7 @@ export default function HomePage() {
     selectOutboundTrain,
     selectReturnTrain,
     setLoadingStates,
+    selfDriveDepartureTime,
     outboundTrains,
     returnTrains,
     resetAll
@@ -83,15 +91,67 @@ export default function HomePage() {
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
   const [hotelDrawerOpen, setHotelDrawerOpen] = useState(false);
   const [selectedMapDay, setSelectedMapDay] = useState<number | null>(null);
+  const [memories, setMemories] = useState<TravelMemory[]>([]);
+  const [isLoadingMemories, setIsLoadingMemories] = useState(false);
+  const [loadingMemoryId, setLoadingMemoryId] = useState<string | number | null>(null);
+  const skipNextHistorySaveRef = useRef(false);
 
   const histories = isAuthenticated ? getHistoriesByUser(user!) : [];
+
+  const loadMemories = useCallback(async () => {
+    if (!isAuthenticated) {
+      setMemories([]);
+      return;
+    }
+
+    setIsLoadingMemories(true);
+    try {
+      const result = await getMemories();
+      const items = Array.isArray(result.data) ? result.data : [];
+      setMemories(
+        items.map((item: any) => ({
+          id: item.id,
+          kind: String(item.kind || 'plan'),
+          title: String(item.title || '旅行记忆'),
+          summary: String(item.summary || ''),
+          created_at: String(item.created_at || new Date().toISOString()),
+        })),
+      );
+    } catch {
+      setMemories([]);
+    } finally {
+      setIsLoadingMemories(false);
+    }
+  }, [isAuthenticated]);
 
   // Check authentication
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push('/auth');
+      authMe()
+        .then((result) => {
+          if (result.authenticated && result.user?.username) {
+            resetAll();
+            login(result.user.username);
+          } else {
+            resetAll();
+            router.push('/auth');
+          }
+        })
+        .catch(() => {
+          resetAll();
+          logout();
+          router.push('/auth');
+        });
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, login, logout, resetAll, router]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadMemories();
+    } else {
+      setMemories([]);
+    }
+  }, [isAuthenticated, user, loadMemories]);
 
   // Handle plan generation
   useEffect(() => {
@@ -103,6 +163,11 @@ export default function HomePage() {
   // Save plan to history when generated
   useEffect(() => {
     if (travelPlan && user) {
+      if (skipNextHistorySaveRef.current) {
+        skipNextHistorySaveRef.current = false;
+        return;
+      }
+
       addHistory(user, {
         planId: travelPlan.id,
         destination: travelPlan.city,
@@ -115,16 +180,32 @@ export default function HomePage() {
 
   const generatePlan = async () => {
     try {
-      // Generate mock plan
-      const plan = generateMockTravelPlan(requirements, selectedOutboundTrain, selectedReturnTrain);
-      const ragRefs = generateMockRAGReferences(plan.city);
+      setLoadingStates({ isGenerating: true });
+      const payload = createPlanPayload(
+        requirements,
+        selectedOutboundTrain,
+        selectedReturnTrain,
+        selfDriveDepartureTime,
+      );
+      const result = await createPlan(payload);
+      const backendPlan = result.data || {};
+      const plan = mapBackendPlanToTravelPlan(
+        backendPlan,
+        requirements,
+        selectedOutboundTrain,
+        selectedReturnTrain,
+      );
+      const ragRefs = mapBackendRagReferences(backendPlan.rag_context);
 
       setTravelPlan(plan);
       setRagReferences(ragRefs);
+      await loadMemories();
       setPlanningState('result');
     } catch (error) {
-      setErrorMessage('生成失败，请重试');
+      setErrorMessage(getErrorMessage(error, '生成失败，请重试'));
       setPlanningState('error');
+    } finally {
+      setLoadingStates({ isGenerating: false });
     }
   };
 
@@ -147,6 +228,43 @@ export default function HomePage() {
       selectReturnTrain(null);
     }
     setPlanningState('trainSelect');
+  };
+
+  const handleMemorySelect = async (memory: TravelMemory) => {
+    if (memory.kind !== 'plan') return;
+
+    setLoadingMemoryId(memory.id);
+    try {
+      const result = await getMemory(memory.id);
+      const detail = result.data as TravelMemory | undefined;
+      const payload = detail?.payload || {};
+      const backendPlan = payload.plan || {};
+
+      if (!backendPlan || Object.keys(backendPlan).length === 0) {
+        throw new Error('这条攻略记忆没有保存完整详情。');
+      }
+
+      const restoredRequirements = mapBackendRequestToRequirements(payload.request || {}, backendPlan);
+      const restoredPlan = mapBackendPlanToTravelPlan(backendPlan, restoredRequirements);
+
+      skipNextHistorySaveRef.current = true;
+      setRequirements(restoredRequirements);
+      selectOutboundTrain(restoredPlan.intercityTransport.outbound);
+      selectReturnTrain(restoredPlan.intercityTransport.return);
+      setTravelPlan(restoredPlan);
+      setRagReferences(mapBackendRagReferences(backendPlan.rag_context));
+      setSelectedAttraction(null);
+      setAttractionDrawerOpen(false);
+      setSelectedHotel(null);
+      setHotelDrawerOpen(false);
+      setSelectedMapDay(null);
+      setPlanningState('result');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, '读取历史攻略失败，请重试'));
+      setPlanningState('error');
+    } finally {
+      setLoadingMemoryId(null);
+    }
   };
 
   const handleBackToInput = () => {
@@ -211,6 +329,16 @@ export default function HomePage() {
   // Result view
   if (planningState === 'result' && travelPlan) {
     const allAttractions = travelPlan.itineraries.flatMap((day) => day.attractions);
+    const weatherData = travelPlan.itineraries
+      .filter((day) => day.weather)
+      .map((day) => ({
+        date: day.date,
+        weather: day.weather!.weather,
+        tempMin: day.weather!.tempMin,
+        tempMax: day.weather!.tempMax,
+        windDirection: day.weather!.windDirection,
+        windLevel: day.weather!.windLevel,
+      }));
 
     return (
       <AppLayout>
@@ -238,6 +366,8 @@ export default function HomePage() {
               新规划
             </Button>
           </div>
+
+          <WeatherPanel weatherData={weatherData} />
 
           {/* Main content - Map First */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -463,6 +593,10 @@ export default function HomePage() {
                 <UserInputPanel />
                 <HistoryPanel
                   histories={histories}
+                  memories={memories}
+                  isLoading={isLoadingMemories}
+                  loadingMemoryId={loadingMemoryId}
+                  onMemorySelect={handleMemorySelect}
                   onClear={() => user && clearHistories(user)}
                 />
               </>
@@ -472,25 +606,38 @@ export default function HomePage() {
               <RequirementConfirmation />
             )}
 
-            {['trainQuery', 'trainSelect', 'ready', 'generating'].includes(planningState) && requirements.intercityTransport === 'train' && (
+            {['trainQuery', 'trainSelect', 'ready', 'generating'].includes(planningState) &&
+              requirements.intercityTransport === 'train' && (
               <TrainSelectionPanel />
+            )}
+
+            {requirements.intercityTransport === 'plane' && ['trainQuery', 'trainSelect', 'ready', 'generating'].includes(planningState) && (
+              <Card className="border-0 shadow-sm bg-white p-6 text-center">
+                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <p className="text-sm font-medium text-slate-700">飞机规划已取消支持</p>
+                <p className="text-xs text-slate-500 mt-2">
+                  目前不再生成航班候选，请改选高铁/火车、自驾或长途大巴。
+                </p>
+                <Button
+                  onClick={() => {
+                    setRequirements({ intercityTransport: 'unselected' });
+                    setOutboundTrains([]);
+                    setReturnTrains([]);
+                    selectOutboundTrain(null);
+                    selectReturnTrain(null);
+                    setPlanningState('transportMode');
+                  }}
+                  className="mt-4 bg-gradient-to-r from-sky-500 to-teal-500"
+                >
+                  重新选择交通方式
+                </Button>
+              </Card>
             )}
 
             {requirements.intercityTransport === 'selfDrive' && ['ready', 'generating'].includes(planningState) && (
               <SelfDrivePanel />
-            )}
-
-            {requirements.intercityTransport === 'plane' && ['ready', 'generating'].includes(planningState) && (
-              <Card className="border-0 shadow-sm bg-white p-6 text-center">
-                <p className="text-sm text-slate-600">飞机票务信息暂不支持自动查询</p>
-                <p className="text-xs text-slate-400 mt-2">请自行查询航班后生成攻略</p>
-                <Button
-                  onClick={() => setPlanningState('generating')}
-                  className="mt-4 bg-gradient-to-r from-sky-500 to-teal-500"
-                >
-                  直接生成攻略
-                </Button>
-              </Card>
             )}
 
             {requirements.intercityTransport === 'bus' && ['ready', 'generating'].includes(planningState) && (

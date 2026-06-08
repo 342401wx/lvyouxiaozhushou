@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>旅游规划小助手</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/styles.css?v=20260607-bolt-ui1" />
+  </head>
+  <body>
+    <section class="auth-screen" id="auth-screen" aria-label="登录注册">
+      <div class="auth-card">
+        <p class="eyebrow">Trip Workspace</p>
+        <h1>旅行计划</h1>
+        <p class="auth-copy">登录后保存自己的行程记录，朋友测试时也不会互相串数据。</p>
+
+        <div class="auth-tabs" role="tablist">
+          <button class="auth-tab active" id="login-tab" type="button">登录</button>
+          <button class="auth-tab" id="register-tab" type="button">注册</button>
+        </div>
+
+        <form id="login-form" class="auth-form">
+          <label>
+            <span>账号</span>
+            <input name="username" autocomplete="username" placeholder="英文+数字，至少6位" required />
+          </label>
+          <label>
+            <span>密码</span>
+            <input name="password" type="password" autocomplete="current-password" placeholder="英文+数字，至少8位" required />
+          </label>
+          <button class="primary-btn" type="submit">
+            <span class="btn-label">登录</span>
+            <span class="btn-loader" aria-hidden="true"></span>
+          </button>
+        </form>
+
+        <form id="register-form" class="auth-form hidden">
+          <label>
+            <span>账号</span>
+            <input name="username" autocomplete="username" placeholder="例如 trip01a" required />
+          </label>
+          <label>
+            <span>密码</span>
+            <input name="password" type="password" autocomplete="new-password" placeholder="例如 travel2026" required />
+          </label>
+          <p class="auth-hint">账号必须由英文字母和数字组成，至少 6 位；密码必须由英文字母和数字组成，至少 8 位。</p>
+          <button class="primary-btn" type="submit">
+            <span class="btn-label">注册并登录</span>
+            <span class="btn-loader" aria-hidden="true"></span>
+          </button>
+        </form>
+
+        <p class="auth-message" id="auth-message" role="status"></p>
+      </div>
+    </section>
+
+    <main class="app-shell locked" id="app-shell">
+      <section class="planner-panel" aria-labelledby="app-title">
+        <div class="brand-row">
+          <div>
+            <p class="eyebrow">Trip Workspace</p>
+            <h1 id="app-title">把行程先排顺</h1>
+          </div>
+          <span class="status-pill" id="tool-status">准备中</span>
+        </div>
+
+        <div class="user-row">
+          <span id="user-badge">未登录</span>
+          <button class="ghost-btn small-btn" id="logout-btn" type="button">退出</button>
+        </div>
+
+        <form id="intent-form" class="plan-form">
+          <label class="prompt-field">
+            <span>你想怎么玩</span>
+            <textarea
+              name="message"
+              rows="7"
+              placeholder="例如：我从六安出发，想去淄博玩2天，准备坐高铁，想看动物园，也想吃当地特色，预算3000。"
+              required
+            ></textarea>
+          </label>
+
+          <button class="primary-btn" type="submit" id="intent-submit-btn">
+            <span class="btn-label">整理需求</span>
+            <span class="btn-loader" aria-hidden="true"></span>
+          </button>
+        </form>
+
+        <section class="memory-panel" aria-label="账号记忆">
+          <div class="memory-head">
+            <button class="memory-toggle-btn" id="memory-toggle-btn" type="button" aria-expanded="false" aria-controls="memory-list-panel">
+              <span>
+                <span class="eyebrow">History</span>
+                <strong>历史记录</strong>
+                <small id="memory-meta">登录后显示当前账号的记录</small>
+              </span>
+              <span class="memory-toggle-text">展开</span>
+            </button>
+            <button class="ghost-btn small-btn" id="refresh-memory-btn" type="button">刷新</button>
+          </div>
+          <div class="memory-list-panel collapsed" id="memory-list-panel">
+            <div id="memory-list" class="memory-list">
+              <p class="muted">登录后显示当前账号的历史记录。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="intent-section" id="intent-section" aria-live="polite"></section>
+      </section>
+
+      <section class="workspace">
+        <section class="map-section" aria-label="地图">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Route</p>
+              <h2>地图</h2>
+            </div>
+            <div class="button-row">
+              <button class="ghost-btn" id="fit-map-btn" type="button">适配视野</button>
+              <button class="ghost-btn" id="expand-map-btn" type="button">放大地图</button>
+            </div>
+          </div>
+          <div id="map" class="map-canvas">
+            <div class="map-empty">生成攻略后显示点位和路线</div>
+          </div>
+        </section>
+
+        <section class="result-section" id="result-section">
+          <div class="empty-state">
+            <h2>先写下旅行想法</h2>
+            <p>整理完需求后，地图和每天的安排会显示在这里。</p>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <aside class="detail-drawer" id="detail-drawer" aria-hidden="true">
+      <div class="drawer-card">
+        <button class="icon-btn" id="drawer-close" type="button" aria-label="关闭详情">×</button>
+        <div id="drawer-content"></div>
+      </div>
+    </aside>
+
+    <aside class="map-modal" id="map-modal" aria-hidden="true">
+      <div class="map-modal-card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Route</p>
+            <h2>路线全景</h2>
+          </div>
+          <div class="button-row">
+            <button class="ghost-btn" id="fit-large-map-btn" type="button">适配视野</button>
+            <button class="icon-btn inline-icon-btn" id="map-modal-close" type="button" aria-label="关闭地图">×</button>
+          </div>
+        </div>
+        <div id="map-large" class="map-canvas map-canvas-large">
+          <div class="map-empty">生成攻略后显示点位和路线</div>
+        </div>
+      </div>
+    </aside>
+
+    <script src="/app.js?v=20260607-return2"></script>
+  </body>
+</html>

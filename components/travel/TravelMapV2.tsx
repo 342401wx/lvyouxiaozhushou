@@ -36,6 +36,11 @@ export function TravelMapV2({ attractions, onAttractionClick, selectedDay }: Tra
     }
   }, [selectedDay, attractions]);
 
+  const openAttractionFromModal = (attraction: Attraction) => {
+    setIsModalOpen(false);
+    window.setTimeout(() => onAttractionClick?.(attraction), 120);
+  };
+
   if (!isMounted) {
     return (
       <div className="h-[500px] bg-slate-100 rounded-xl border-2 border-primary/20 flex items-center justify-center">
@@ -47,7 +52,7 @@ export function TravelMapV2({ attractions, onAttractionClick, selectedDay }: Tra
   return (
     <div className="space-y-3">
       {/* Map container - larger */}
-      <div className="relative h-[500px] bg-slate-100 rounded-xl overflow-hidden border-2 border-primary/20 shadow-lg hover:shadow-xl transition-shadow group">
+      <div className="relative isolate z-0 h-[500px] bg-slate-100 rounded-xl overflow-hidden border-2 border-primary/20 shadow-lg hover:shadow-xl transition-shadow group">
         {/* Header overlay */}
         <div className="absolute top-0 inset-x-0 z-20 bg-gradient-to-b from-white/80 to-transparent backdrop-blur-sm px-4 py-3 flex items-center justify-between border-b border-primary/10">
           <div className="flex items-center gap-2">
@@ -59,6 +64,7 @@ export function TravelMapV2({ attractions, onAttractionClick, selectedDay }: Tra
           <Button
             size="icon"
             variant="ghost"
+            aria-label="打开全景地图"
             className="h-8 w-8 rounded-lg hover:bg-primary/10"
             onClick={() => setIsModalOpen(true)}
           >
@@ -128,10 +134,16 @@ export function TravelMapV2({ attractions, onAttractionClick, selectedDay }: Tra
               {filteredAttractions.map((attraction) => (
                 <div
                   key={attraction.id}
+                  role="button"
+                  tabIndex={0}
+                  data-map-attraction="modal"
                   className="p-2 rounded-lg border border-primary/20 hover:bg-primary/5 cursor-pointer transition-colors"
-                  onClick={() => {
-                    onAttractionClick?.(attraction);
-                    setIsModalOpen(false);
+                  onClick={() => openAttractionFromModal(attraction)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      openAttractionFromModal(attraction);
+                    }
                   }}
                 >
                   <div className="font-semibold text-xs text-slate-800">
@@ -145,14 +157,11 @@ export function TravelMapV2({ attractions, onAttractionClick, selectedDay }: Tra
             </div>
 
             {/* Large map */}
-            <div className="flex-1 overflow-hidden rounded-lg">
+            <div className="relative isolate z-0 flex-1 overflow-hidden rounded-lg">
               <MapContent
                 attractions={filteredAttractions}
                 selectedDay={selectedDay}
-                onAttractionClick={(attraction) => {
-                  onAttractionClick?.(attraction);
-                  setIsModalOpen(false);
-                }}
+                onAttractionClick={openAttractionFromModal}
                 inModal
               />
             </div>
@@ -172,6 +181,15 @@ function AttactionSticker({ attraction, onClick }: AttactionStickerProps) {
   return (
     <div
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      data-map-attraction="sticker"
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
       className="relative p-2 rounded-lg border-2 border-primary/30 bg-white hover:bg-sky-50 cursor-pointer transition-all hover:shadow-md hover:border-primary/60 group"
     >
       <div className="absolute -top-2 -left-1 w-5 h-5 rounded-full bg-sky-500 border-2 border-white flex items-center justify-center text-[10px] font-bold text-white shadow-sm">

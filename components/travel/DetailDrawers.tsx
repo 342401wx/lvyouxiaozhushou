@@ -24,7 +24,11 @@ import {
   Heart,
   Coffee,
   ParkingCircle,
-  Info
+  Info,
+  MessageSquareQuote,
+  ThumbsUp,
+  AlertTriangle,
+  ListChecks
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -49,8 +53,8 @@ export function AttractionDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg">
-        <SheetHeader className="space-y-3">
+      <SheetContent className="z-[70] flex h-full w-full flex-col overflow-hidden p-5 sm:max-w-lg">
+        <SheetHeader className="shrink-0 space-y-3 pr-8">
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="bg-sky-100 text-sky-700">
               {attraction.dayNumber}-{attraction.stopNumber}
@@ -61,7 +65,7 @@ export function AttractionDrawer({
           <SheetDescription className="text-left">{attraction.description}</SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 mt-6 pr-4">
+        <ScrollArea className="mt-6 min-h-0 flex-1 pr-4">
           <div className="space-y-6">
             {/* Basic info */}
             <div className="grid grid-cols-2 gap-4">
@@ -251,12 +255,12 @@ interface HotelDrawerProps {
 export function HotelDrawer({ hotel, open, onOpenChange }: HotelDrawerProps) {
   if (!hotel) return null;
 
-  const isDetail = 'reviewSummary' in hotel;
+  const reviewProfile = hotel.reviewProfile;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg">
-        <SheetHeader className="space-y-3">
+      <SheetContent className="z-[70] flex h-full w-full flex-col overflow-hidden p-5 sm:max-w-lg">
+        <SheetHeader className="shrink-0 space-y-3 pr-8">
           <div className="flex items-center gap-2">
             <Badge variant="outline">{hotel.type}</Badge>
             <div className="flex items-center gap-1 text-xs text-slate-500">
@@ -267,7 +271,7 @@ export function HotelDrawer({ hotel, open, onOpenChange }: HotelDrawerProps) {
           <SheetTitle className="text-left">{hotel.name}</SheetTitle>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 mt-6 pr-4">
+        <ScrollArea className="mt-6 min-h-0 flex-1 pr-4">
           <div className="space-y-6">
             {/* Price */}
             <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-lg p-4">
@@ -314,8 +318,124 @@ export function HotelDrawer({ hotel, open, onOpenChange }: HotelDrawerProps) {
               )}
             </div>
 
+            {reviewProfile && (
+              <>
+                <Separator />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                      <MessageSquareQuote className="h-4 w-4 text-teal-600" />
+                      <span>{reviewProfile.title}</span>
+                    </div>
+                    {reviewProfile.summary && (
+                      <p className="rounded-lg border border-teal-100 bg-teal-50/70 p-3 text-xs leading-5 text-slate-700">
+                        {reviewProfile.summary}
+                      </p>
+                    )}
+                  </div>
+
+                  {reviewProfile.focusPoints.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {reviewProfile.focusPoints.map((point) => (
+                        <Badge key={point} variant="secondary" className="bg-slate-100 text-slate-700">
+                          {point}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {reviewProfile.sections.map((section) => {
+                    const ToneIcon = section.tone === 'risk' ? AlertTriangle : section.tone === 'positive' ? ThumbsUp : ListChecks;
+                    return (
+                      <div
+                        key={`${section.title}-${section.tone}`}
+                        className={cn(
+                          'rounded-lg border p-3',
+                          section.tone === 'risk'
+                            ? 'border-amber-200 bg-amber-50/70'
+                            : section.tone === 'positive'
+                              ? 'border-emerald-100 bg-emerald-50/60'
+                              : 'border-slate-200 bg-slate-50/70',
+                        )}
+                      >
+                        <div className="flex items-start gap-2">
+                          <ToneIcon
+                            className={cn(
+                              'mt-0.5 h-4 w-4 flex-shrink-0',
+                              section.tone === 'risk'
+                                ? 'text-amber-600'
+                                : section.tone === 'positive'
+                                  ? 'text-emerald-600'
+                                  : 'text-slate-500',
+                            )}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold text-slate-800">{section.title}</div>
+                            {section.takeaway && (
+                              <p className="mt-1 text-xs leading-5 text-slate-600">{section.takeaway}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {section.examples.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {section.examples.map((example, index) => (
+                              <div
+                                key={`${section.title}-example-${index}`}
+                                className="rounded-md border border-white/70 bg-white/80 p-2.5"
+                              >
+                                <div className="mb-1 flex items-center justify-between gap-2">
+                                  <div className="flex flex-wrap gap-1">
+                                    {example.cues.map((cue) => (
+                                      <Badge key={cue} variant="outline" className="bg-white text-[10px] text-slate-600">
+                                        {cue}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                  {example.rating !== null && (
+                                    <div className="flex items-center gap-1 text-[10px] font-medium text-amber-600">
+                                      <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                                      <span>{example.rating}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <p className="text-xs leading-5 text-slate-600">{example.excerpt}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {reviewProfile.bookingTips.length > 0 && (
+                    <div className="rounded-lg border border-sky-100 bg-sky-50/70 p-3">
+                      <div className="mb-2 flex items-center gap-2 text-xs font-medium text-sky-700">
+                        <Info className="h-4 w-4" />
+                        <span>订房提示</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {reviewProfile.bookingTips.map((tip) => (
+                          <li key={tip} className="flex gap-2 text-xs leading-5 text-sky-800">
+                            <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-sky-500" />
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {reviewProfile.sourceNote && (
+                    <div className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-500">
+                      {reviewProfile.sourceNote}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
             {/* Reviews */}
-            {hotel.reviews && (
+            {!reviewProfile && hotel.reviews && (
               <>
                 <Separator />
                 <div className="space-y-3">
@@ -383,6 +503,7 @@ export function HotelDrawer({ hotel, open, onOpenChange }: HotelDrawerProps) {
             )}
 
             {/* Booking tips */}
+            {!reviewProfile && (
             <div className="bg-sky-50 rounded-lg p-3">
               <div className="flex items-center gap-2 text-sky-700 text-xs font-medium mb-2">
                 <Info className="w-4 h-4" />
@@ -394,6 +515,7 @@ export function HotelDrawer({ hotel, open, onOpenChange }: HotelDrawerProps) {
                 <li>入住前可致电确认房型和设施</li>
               </ul>
             </div>
+            )}
           </div>
         </ScrollArea>
       </SheetContent>

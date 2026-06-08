@@ -96,17 +96,17 @@ export function DailyTimelineV2({ itinerary, onAttractionClick, onHotelClick }: 
     return weatherEmoji[weather as keyof typeof weatherEmoji] || '🌤️';
   };
 
+  const formatWindLevel = (value: string | number) => {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    return text.endsWith('级') ? text : `${text}级`;
+  };
+
   return (
     <div className="space-y-4">
       {/* Date header with weather */}
       {itinerary.weather && (
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 border border-primary/20 p-4">
-          {/* Background pattern */}
-          <div className="absolute inset-0 opacity-50 pointer-events-none">
-            <div className="absolute top-0 left-0 w-24 h-24 bg-primary/5 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 right-0 w-32 h-32 bg-secondary/5 rounded-full blur-3xl" />
-          </div>
-
+        <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="relative flex items-center justify-between">
             <div>
               <div className="text-sm text-muted-foreground mb-1">
@@ -139,7 +139,7 @@ export function DailyTimelineV2({ itinerary, onAttractionClick, onHotelClick }: 
                 <div className="flex items-center gap-1">
                   <Wind className="w-3 h-3 text-slate-500" />
                   <span className="text-xs text-slate-600">
-                    {itinerary.weather.windDirection}{itinerary.weather.windLevel}级
+                    {itinerary.weather.windDirection}{formatWindLevel(itinerary.weather.windLevel)}
                   </span>
                 </div>
               </div>
@@ -233,9 +233,8 @@ function ActivityCardV2({ activity, config, isLast, onAttractionClick }: Activit
 
       {/* Card */}
       <div className={cn(
-        'flex-1 rounded-lg border-2 p-3 transition-all hover:shadow-md',
-        config.borderColor,
-        config.bg
+        'flex-1 rounded-lg border border-l-4 bg-white p-3 shadow-sm transition-all hover:border-primary/30 hover:shadow-md',
+        config.borderColor
       )}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -287,8 +286,7 @@ interface MealCardProps {
 function MealCard({ icon: Icon, label, meal, className, iconColor }: MealCardProps) {
   return (
     <div className={cn(
-      'rounded-lg border-2 p-3 transition-all hover:shadow-md animate-slideInRight',
-      className
+      'rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-all hover:border-primary/30 hover:shadow-md animate-slideInRight'
     )}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -320,11 +318,7 @@ interface HotelCardV2Props {
 
 function HotelCardV2({ hotel, onHotelClick }: HotelCardV2Props) {
   return (
-    <div className="relative overflow-hidden rounded-lg border-2 border-teal-300 bg-teal-50 p-4 animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
-      <div className="absolute inset-0 opacity-30 pointer-events-none">
-        <div className="absolute -right-8 -top-8 w-16 h-16 bg-teal-200 rounded-full blur-2xl" />
-      </div>
-
+    <div className="relative overflow-hidden rounded-lg border border-l-4 border-teal-300 bg-white p-4 shadow-sm animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
       <div className="relative flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 flex-1">
           <div className="w-10 h-10 rounded-lg bg-teal-500/20 flex items-center justify-center flex-shrink-0">

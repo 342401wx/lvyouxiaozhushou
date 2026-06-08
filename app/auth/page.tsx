@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/lib/store';
+import { useAuthStore, usePlanningStore } from '@/lib/store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,10 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, XCircle, MapPin, Plane, Calendar } from 'lucide-react';
+import { authLogin, authRegister, getErrorMessage } from '@/lib/backend-api';
 
 export default function AuthPage() {
   const router = useRouter();
   const { user, isAuthenticated, login } = useAuthStore();
+  const { resetAll } = usePlanningStore();
 
   const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [registerData, setRegisterData] = useState({ username: '', password: '', confirmPassword: '' });
@@ -55,20 +57,17 @@ export default function AuthPage() {
     }
 
     setIsSubmitting(true);
-    // Simulate login
-    setTimeout(() => {
-      // Check if user exists in localStorage (simulated)
-      const users = JSON.parse(localStorage.getItem('travel-users') || '{}');
-      if (users[loginData.username]?.password === loginData.password) {
-        login(loginData.username);
-        router.push('/');
-      } else {
-        // For demo, allow any valid format to login
-        login(loginData.username);
-        router.push('/');
-      }
+
+    try {
+      const result = await authLogin(loginData.username, loginData.password);
+      resetAll();
+      login(result.user?.username || loginData.username);
+      router.push('/');
+    } catch (error) {
+      setLoginErrors([getErrorMessage(error, '登录失败，请检查账号密码')]);
+    } finally {
       setIsSubmitting(false);
-    }, 500);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -89,22 +88,17 @@ export default function AuthPage() {
     }
 
     setIsSubmitting(true);
-    // Simulate registration
-    setTimeout(() => {
-      const users = JSON.parse(localStorage.getItem('travel-users') || '{}');
-      if (users[registerData.username]) {
-        setRegisterErrors(['该账号已被注册']);
-        setIsSubmitting(false);
-        return;
-      }
 
-      users[registerData.username] = { password: registerData.password };
-      localStorage.setItem('travel-users', JSON.stringify(users));
-
-      login(registerData.username);
+    try {
+      const result = await authRegister(registerData.username, registerData.password);
+      resetAll();
+      login(result.user?.username || registerData.username);
       router.push('/');
+    } catch (error) {
+      setRegisterErrors([getErrorMessage(error, '注册失败，请稍后重试')]);
+    } finally {
       setIsSubmitting(false);
-    }, 500);
+    }
   };
 
   return (

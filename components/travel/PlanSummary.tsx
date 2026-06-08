@@ -31,15 +31,17 @@ interface PlanSummaryProps {
 }
 
 export function PlanSummary({ plan, onReselectTrain }: PlanSummaryProps) {
+  const isFlightPlan = [plan.intercityTransport.outbound, plan.intercityTransport.return].some(
+    (item) => item?.transportType === 'plane',
+  );
+  const TransportIcon = isFlightPlan ? Plane : TrainFront;
   const dataSourceStatus = [
     { key: 'knowledgeBase', label: '资料库', icon: Database, value: plan.dataSource.knowledgeBase },
     { key: 'map', label: '地图', icon: Map, value: plan.dataSource.map },
     { key: 'requirements', label: '需求整理', icon: FileText, value: plan.dataSource.requirements },
-    { key: 'transport', label: '城际交通', icon: TrainFront, value: plan.dataSource.transport },
+    { key: 'transport', label: '城际交通', icon: TransportIcon, value: plan.dataSource.transport },
     { key: 'attractions', label: '景区', icon: MapPin, value: plan.dataSource.attractions },
   ];
-
-  const transportIcon = plan.intercityTransport.outbound ? TrainFront : Plane;
 
   return (
     <div className="space-y-4">
@@ -127,8 +129,8 @@ export function PlanSummary({ plan, onReselectTrain }: PlanSummaryProps) {
         <Card className="border-0 shadow-sm bg-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <TrainFront className="w-4 h-4 text-blue-600" />
-              往返交通详情
+              <TransportIcon className="w-4 h-4 text-blue-600" />
+              {isFlightPlan ? '往返航班详情' : '往返交通详情'}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -172,7 +174,11 @@ export function PlanSummary({ plan, onReselectTrain }: PlanSummaryProps) {
 
             <div className="flex items-center gap-2 mt-3 text-xs text-amber-600 bg-amber-50 rounded-lg p-2">
               <AlertTriangle className="w-4 h-4" />
-              <span>以上车次信息仅供参考，以12306实际购票为准。建议提前购买车票。</span>
+              <span>
+                {isFlightPlan
+                  ? '当前航班号和起降时间为候选排期参考，实际航班、时刻和票价请以航司/航旅纵横/携程等平台为准。'
+                  : '以上车次信息仅供参考，以12306实际购票为准。建议提前购买车票。'}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -287,6 +293,7 @@ interface TrainInfoProps {
 }
 
 function TrainInfo({ train }: TrainInfoProps) {
+  const isFlight = train.transportType === 'plane';
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -313,7 +320,7 @@ function TrainInfo({ train }: TrainInfoProps) {
       <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
         <Badge variant="outline" className="text-[10px]">{train.seatType}</Badge>
         <Badge variant={train.isAvailable ? 'secondary' : 'destructive'} className="text-[10px]">
-          {train.isAvailable ? '可订' : '无票'}
+          {train.isAvailable ? (isFlight ? '候选' : '可订') : isFlight ? '不可用' : '无票'}
         </Badge>
       </div>
     </div>

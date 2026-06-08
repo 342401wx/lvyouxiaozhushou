@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   MapPin,
   TrainFront,
-  Plane,
   Bus,
   Car,
   Bike,
@@ -32,8 +31,6 @@ export function RouteHeader({ plan, requirements }: RouteHeaderProps) {
     switch (type) {
       case 'train':
         return <TrainFront className="w-4 h-4" />;
-      case 'plane':
-        return <Plane className="w-4 h-4" />;
       case 'bus':
         return <Bus className="w-4 h-4" />;
       case 'selfDrive':
@@ -48,7 +45,7 @@ export function RouteHeader({ plan, requirements }: RouteHeaderProps) {
   const getTransportLabel = (type: string) => {
     const labels: Record<string, string> = {
       train: '高铁',
-      plane: '飞机',
+      plane: '待选择',
       bus: '大巴',
       selfDrive: '自驾',
       cycling: '骑行',

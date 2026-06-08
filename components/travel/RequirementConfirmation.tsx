@@ -39,7 +39,19 @@ export function RequirementConfirmation() {
     }
   }, [requirements.departureDate, requirements.returnDate]);
 
+  const editableTextValue = (field: string) => {
+    if (field === 'budget') return String(requirements.budget?.amount || '');
+    if (field === 'departureDate') {
+      return requirements.departureDate ? format(requirements.departureDate, 'yyyy-MM-dd') : '';
+    }
+    if (field === 'returnDate') {
+      return requirements.returnDate ? format(requirements.returnDate, 'yyyy-MM-dd') : '';
+    }
+    return String((requirements as any)[field] || '');
+  };
+
   const handleEdit = (field: string) => {
+    setTempValues(prev => ({ ...prev, [field]: editableTextValue(field) }));
     setEditing(field);
   };
 
@@ -50,6 +62,9 @@ export function RequirementConfirmation() {
       setRequirements({ returnDate: new Date(tempValues.returnDate) });
     } else if (field === 'budget') {
       setRequirements({ budget: { ...requirements.budget, amount: parseInt(tempValues.budget || '0') } });
+    } else if (field === 'tripDays') {
+      const days = Math.max(1, parseInt(tempValues.tripDays || '1', 10) || 1);
+      setRequirements({ tripDays: days });
     } else if (tempValues[field]) {
       setRequirements({ [field]: tempValues[field] });
     }
@@ -111,7 +126,7 @@ export function RequirementConfirmation() {
     if (key === 'intercityTransport') {
       const transportMap: Record<string, string> = {
         train: '高铁/火车',
-        plane: '飞机',
+        plane: '未选择',
         bus: '长途大巴',
         selfDrive: '自驾',
         cycling: '骑行',
@@ -151,11 +166,31 @@ export function RequirementConfirmation() {
     setTempValues(prev => ({ ...prev, [field]: '' }));
   };
 
+  const routeReady = Boolean(requirements.departure?.trim() && requirements.destination?.trim());
+  const editableFieldKeys = new Set(['destination', 'departure', 'tripDays', 'departureDate', 'returnDate', 'budget']);
+
+  const goNext = () => {
+    if (!routeReady) return;
+    if (requirements.budget?.includesIntercityTransport === null) {
+      setPlanningState('budgetConfirm');
+    } else if (requirements.intercityTransport === 'unselected') {
+      setPlanningState('transportMode');
+    } else if (requirements.intercityTransport === 'train') {
+      setPlanningState('trainQuery');
+    } else if (requirements.intercityTransport === 'selfDrive') {
+      setPlanningState('ready');
+    } else {
+      setPlanningState('ready');
+    }
+  };
+
   const handleBudgetConfirm = (includes: boolean) => {
     setRequirements({
       budget: { ...requirements.budget, includesIntercityTransport: includes }
     });
-    if (requirements.intercityTransport === 'unselected') {
+    if (!routeReady) {
+      setPlanningState('confirm');
+    } else if (requirements.intercityTransport === 'unselected') {
       setPlanningState('transportMode');
     } else if (requirements.intercityTransport === 'train') {
       setPlanningState('trainQuery');
@@ -211,7 +246,6 @@ export function RequirementConfirmation() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {[
               { value: 'train', label: '高铁/火车', icon: '🚄' },
-              { value: 'plane', label: '飞机', icon: '✈️' },
               { value: 'bus', label: '长途大巴', icon: '🚌' },
               { value: 'selfDrive', label: '自驾', icon: '🚗' },
               { value: 'cycling', label: '骑行', icon: '🚴' },
@@ -226,7 +260,9 @@ export function RequirementConfirmation() {
                 )}
                 onClick={() => {
                   setRequirements({ intercityTransport: transport.value as any });
-                  if (transport.value === 'train') {
+                  if (!routeReady) {
+                    setPlanningState('confirm');
+                  } else if (transport.value === 'train') {
                     setPlanningState('trainQuery');
                   } else if (transport.value === 'selfDrive') {
                     setPlanningState('ready');
@@ -275,19 +311,47 @@ export function RequirementConfirmation() {
         {/* Editable fields grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {editableFields.slice(0, 8).map((field) => (
-            <div key={field.key} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-              <div className="text-sm">
+            <div key={field.key} className="flex items-center justify-between gap-2 py-2 border-b border-slate-100 last:border-0">
+              <div className="min-w-0 flex-1 text-sm">
                 <span className="text-slate-500 text-xs">{field.label}</span>
-                <div className="font-medium text-slate-800">
-                  {getFieldValue(field)}
-                  {field.key === 'budget' && (
-                    <Badge variant="outline" className="ml-2 text-xs">
-                      {requirements.budget?.includesIntercityTransport === true ? '含城际' :
-                        requirements.budget?.includesIntercityTransport === false ? '不含城际' : '未确认'}
-                    </Badge>
-                  )}
-                </div>
+                {editing === field.key && editableFieldKeys.has(field.key) ? (
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <Input
+                      type={field.type === 'number' || field.type === 'budget' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                      value={tempValues[field.key] ?? ''}
+                      onChange={(event) => setTempValues(prev => ({ ...prev, [field.key]: event.target.value }))}
+                      className="h-8 bg-white"
+                    />
+                    <Button size="sm" className="h-8 px-2" onClick={() => handleSave(field.key)}>
+                      <Check className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className={cn(
+                    'font-medium text-slate-800',
+                    getFieldValue(field) === '未设置' && 'text-amber-600'
+                  )}>
+                    {getFieldValue(field)}
+                    {field.key === 'budget' && (
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {requirements.budget?.includesIntercityTransport === true ? '含城际' :
+                          requirements.budget?.includesIntercityTransport === false ? '不含城际' : '未确认'}
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </div>
+              {editableFieldKeys.has(field.key) && editing !== field.key && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-slate-400 hover:text-slate-700"
+                  onClick={() => handleEdit(field.key)}
+                  aria-label={`编辑${field.label}`}
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </Button>
+              )}
             </div>
           ))}
         </div>
@@ -324,10 +388,17 @@ export function RequirementConfirmation() {
 
         {/* Action buttons */}
         {planningState === 'confirm' && (
-          <div className="flex gap-2 pt-2">
+          <div className="space-y-2 pt-2">
+            {!routeReady && (
+              <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
+                还缺出发地或目的地，请点右侧编辑按钮补全后继续。
+              </div>
+            )}
+            <div className="flex gap-2">
             {requirements.intercityTransport === 'unselected' && (
               <Button
                 onClick={() => setPlanningState('transportMode')}
+                disabled={!routeReady}
                 className="flex-1 bg-gradient-to-r from-sky-500 to-teal-500 hover:from-sky-600 hover:to-teal-600"
               >
                 选择交通方式
@@ -337,6 +408,7 @@ export function RequirementConfirmation() {
             {requirements.budget?.includesIntercityTransport === null && (
               <Button
                 onClick={() => setPlanningState('budgetConfirm')}
+                disabled={!routeReady}
                 variant="outline"
                 className="flex-1"
               >
@@ -344,6 +416,18 @@ export function RequirementConfirmation() {
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             )}
+            {requirements.intercityTransport !== 'unselected' &&
+              requirements.budget?.includesIntercityTransport !== null && (
+                <Button
+                  onClick={goNext}
+                  disabled={!routeReady}
+                  className="flex-1 bg-gradient-to-r from-sky-500 to-teal-500 hover:from-sky-600 hover:to-teal-600"
+                >
+                  继续
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

@@ -16,6 +16,7 @@ export type TransportType = 'train' | 'plane' | 'bus' | 'selfDrive' | 'cycling' 
 export interface TrainSchedule {
   id: string;
   trainNo: string;
+  transportType?: TransportType;
   departureTime: string;
   arrivalTime: string;
   departureStation: string;
@@ -120,6 +121,29 @@ export interface Hotel {
     parking: string;
     extraFees: string;
   };
+  reviewProfile?: HotelReviewProfile;
+}
+
+export interface HotelReviewExample {
+  rating: number | null;
+  excerpt: string;
+  cues: string[];
+}
+
+export interface HotelReviewSection {
+  title: string;
+  tone: 'positive' | 'risk' | 'mixed' | string;
+  takeaway: string;
+  examples: HotelReviewExample[];
+}
+
+export interface HotelReviewProfile {
+  title: string;
+  summary: string;
+  focusPoints: string[];
+  sections: HotelReviewSection[];
+  bookingTips: string[];
+  sourceNote: string;
 }
 
 export interface AttractionDetail extends Attraction {
@@ -144,7 +168,7 @@ export interface DayItinerary {
     tempMin: number;
     tempMax: number;
     windDirection: string;
-    windLevel: number;
+    windLevel: number | string;
   };
   breakfast?: {
     name: string;
@@ -221,6 +245,24 @@ export interface HistoryRecord {
   tripDays: number;
   createdAt: Date;
   preview: string;
+}
+
+export type TravelMemoryKind = 'intent' | 'plan' | string;
+
+export interface TravelMemoryPayload {
+  text?: string;
+  intent?: Record<string, unknown>;
+  request?: Record<string, unknown>;
+  plan?: Record<string, unknown>;
+}
+
+export interface TravelMemory {
+  id: number | string;
+  kind: TravelMemoryKind;
+  title: string;
+  summary: string;
+  payload?: TravelMemoryPayload;
+  created_at: string;
 }
 
 export interface AuthState {
